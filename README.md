@@ -1,13 +1,39 @@
-## Hardware based license server
+# Extended-HWID-Based-License-System
 
-forked and modified from https://github.com/SaturnsVoid/HWID-Based-License-System
+An evolved GoLANG based License System, extending the original basic HWID (hardware ID) license system into a comprehensive and API-driven management tool.
+
+## Acknowledgment and Modifications
+
+This project has been forked and significantly modified from the original [HWID-Based-License-System](https://github.com/SaturnsVoid/HWID-Based-License-System) developed by [SaturnsVoid](https://github.com/SaturnsVoid). I deeply appreciate the initial work and foundation laid by the original developer.
+
+### Major Changes from the Original Version
+
+- **Extended API Functionality**: 
+    - The system now comes with an extensive HTTP API, allowing users to interact with the license system remotely and programmatically. This allows operations such as adding, listing, resetting, and removing keys through HTTP requests.
+  
+- **Improved Security**: 
+    - Transitioned from MD5 to SHA-256 for hashing, providing a more secure and collision-resistant hashing algorithm to safeguard the integrity and security of data.
+    - The key point was that the response from the server comes in the form of a hash and is checked on the client side
+    - The security of the system has been enhanced by introducing token-based authorization for API access, ensuring that only authorized users can interact with critical API endpoints.
+
+- **Containerization**: 
+    - Docker support has been implemented, allowing both the client and server to be containerized, which enhances the portability and deployment flexibility of the system.
+
+While I have maintained the essence and usability of the original system, my version introduces several pivotal changes and enhancements aimed at providing additional functionality, improving user experience, and ensuring a higher level of security and stability.
+
+
+## Overview
+
+While the original concept sparked the creation of this advanced version, the codebase has been substantially reconstructed to cater to more varied and complex use-cases, pivoting from a simplistic HWID verification system to an API-oriented, robust license management system.
+
 
 ## Usage
 
-### Buld and run server
+Utilize Docker to encapsulate and deploy the license server.
 
+### Build and Run Server
 ```bash
-docker network create lic
+docker network create lic # create network for server and client to communicate inside Docker for testing
 docker build -t licserver . 
 docker run \
     --network lic \
@@ -19,96 +45,66 @@ docker run \
     licserver
 ```
 
-
-### Run client
+### Run Client
 ```bash
 License=86UU-N4SB-OQYH go run client/client.go 
 ```
 
-## Try to run client in Docker
+### Run Client in Docker
+
+first launch of the client with license activation
 ```bash
 docker build -t client -f Dockerfile-client . 
 docker run --network lic -t --name client -e License="16FB-L6AX-2ZPZ" client
 ```
 
+next client launch with license check
 ```bash
 docker start client
 docker logs client | tail -n 2
 ```
 
+## Key Enhancements
 
+- **API-Oriented Interactions**: Now manage and interact with license data programmatically via HTTP API calls.
+  - **Add Key**: API endpoint to add a key to the license database.
+  - **List Keys**: Accessible API endpoint to list all keys.
+  - **Reset Key**: API feature to reset keys, altering the status within the database.
+  - **Remove Key**: Remove keys from the database via API calls.
+- **Token-Based Authentication**: Introduce a secure layer for API interactions (**except for 'Check method'**).
 
-## HTTP-API
-### ADD
-```bash
-curl -X POST http://127.0.0.1:9347/add \
--H "Authorization: mytoken" \
--H "Content-Type: application/json" \
--d '{"email": "test2", "expiration": "2023-12-31"}'
+## Workflow
 
-{"email":"test2","exp_date":"2023-12-31","license":"5JDG-DVFC-5Z3H","message":"New license generated"}
-```
+### 1. Key Generation:
+- Generate keys using the API or manually, associating them with Email and Expiration Date.
+- Keys conform to a 4x4x4 character format, randomly generated from characters 0-9 and A-Z.
 
-### LIST
-```bash
-curl -s -X GET http://127.0.0.1:9347/list \
--H "Authorization: mytoken" | jq
+### 2. Client Interaction:
+- Initial run searches for `license.dat`, prompting client registration if not found.
+- Clients input their key, subsequently generating a unique HWID for their system/user.
+- The software verifies key validity against the license server, ensuring it's not expired or linked to another HWID.
+- Successful validation adds the HWID to the database.
 
-[
-  "16FB-L6AX-2ZPZ:2023-12-31:test1:8e4db87551f6decab29760f2c2c0b8a74a0b746f08805f035cdb54c0923b4db5",
-  "5JDG-DVFC-5Z3H:2023-12-31:test2:NOTSET"
-]
-```
+### 3. Key Management:
+- Execute key management tasks through API calls (add, list, reset, remove).
+- Ensure secure API interactions using token-based authentication (excluding 'List Keys').
 
-### RESET
-```bash
-curl -X POST http://127.0.0.1:9347/reset-key \
--H "Authorization: mytoken" \
--H "Content-Type: application/json" \
--d '{"key": "16FB-L6AX-2ZPZ"}'
-    
-{"status":"success"}
-```
+### 4. License Verification:
+- The software can initiate a license check against the server as required. (TODO: implement this feature)
+- License verification can be spontaneous or operate on a timed loop.
 
-### REMOVE
-```bash
-curl -X DELETE http://127.0.0.1:9347/remove \
--H "Authorization: mytoken" \
--H "Content-Type: application/json" \
--d '{"email": "test1"}'
+### 5. Server Flexibility:
+- The license server can be configured to run on any available port, adapting to diverse networking scenarios.
 
-{"status":"success"}
-```
+## Web Innterface
+- (TODO: implement this feature)
 
+## Security & Usage Note:
 
+- **Security Consideration**: Use API endpoints judiciously, ensuring secure communication (preferably HTTPS) to prevent inadvertent data exposure.
+- **Database Management**: The system utilizes a text file for the database but offers structured manipulation via API calls, minimizing manual interactions.
 
-_________________________________________________________________________________________
+## Disclaimer:
 
-# HWID-Based-License-System
-A GoLANG based HWID license system, basic.
+This system, although providing an advanced level of license management, is not impenetrable. It is intended to serve as a sophisticated deterrent, offering secure and manageable functionalities. Use it with a comprehensive understanding of its capabilities and boundaries.
 
-Vary simple, basic HWID (hardware ID) license system.
-
-You generate keys with the license server and give the program to the client with a key, on first run the program looks for the license.dat file that contains the key if not found asks the client if they want to register, if so they imput the key and the program generates a HWID for that system and user, connects to the license server where the server checks for the key making sure its not already registerd with another HWID and that its not expired. If good it adds the HWID to the row in the database.
-
-You can generate new keys will the following information;
-
-Email
-Experation Date
-
-The key is generated from a random char generater set to 4x4x4 chars 0-9 and A-Z.
-
-You can also bulk generate keys (without registerd email)
-You also can remove keys (by email)
-
-This is not fail proof, its a simple to use deterent.
-
-The database is just a text file, ity can be edited by hand.
-
-THE PROGRAM WILL NEED TO BE ABLE TO CONNECT TO THE SERVER TO VERIFY THE LICENSE ANYTIME ITS CALLED.
-THE LICENSE CHECK CAN BE RUN AT ANYTIME OR ON A TIMED LOOP.
-LICENSE SERVER CAN RUN ON ANY OPEN PORT.
-
-# Donations
-<img src="https://blockchain.info/Resources/buttons/donate_64.png"/>
-<p align="center">Please Donate To Bitcoin Address: <b>1AEbR1utjaYu3SGtBKZCLJMRR5RS7Bp7eE</b></p>
