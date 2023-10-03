@@ -13,14 +13,47 @@ docker run -d --rm -p 9347:9347 -v $(pwd)/db:/app/db --name licserver -e SALT="1
 
 ### Add first license
 ```bash
-docker exec -it licserver /app/server -add
+ docker exec -it licserver /app/server                                                               
+License Server
+Github: https://github.com/alexshnup/easy-license-system
+Forked from: https://github.com/SaturnsVoid/HWID-Based-License-System
+Total Licenses: 0
+ 
+$> add
+License Email: test
+License Experation (YYYY-MM-DD): 2050-01-01
+New License Generated: L83E-ASVL-8MMN for test
+$> exit
 ```
 
-### Run client
+### Run client first time with activate License
 ```bash
-License=86UU-N4SB-OQYH go run client/client.go 
+License=L83E-ASVL-8MMN go run client/client.go
+...
+2023/10/02 22:15:03 Block: block storage (4 disks, 2TB physical storage), Disk Serial: 0ba018e2c3b10023
+2023/10/02 22:15:03 HwinfoInit OK
+LC....
+License file not found.
+Try activate license from EnvKey: L83E-ASVL-8MMN
+HWID: 5478a74300bb05e53d82f45b4807284c
+Connecting to license server...
+Registered!
+DO NOT DELETE THE FILE! license.dat
+ 
+License OK
 ```
 
+
+### Next starts
+```bash
+go run client/client.go
+...
+2023/10/02 22:17:04 Block: block storage (4 disks, 2TB physical storage), Disk Serial: 0ba018e2c3b10023
+2023/10/02 22:17:04 HwinfoInit OK
+LC....
+HWID: 5478a74300bb05e53d82f45b4807284c
+License OK
+```
 
 _________________________________________________________________________________________
 
