@@ -19,10 +19,6 @@ docker run \
     licserver
 ```
 
-### Add first license
-```bash
-docker exec -it licserver /app/server
-```
 
 ### Run client
 ```bash
@@ -42,7 +38,7 @@ docker logs client | tail -n 2
 
 
 
-## API
+## HTTP-API
 ### ADD
 ```bash
 curl -X POST http://127.0.0.1:9347/add \
