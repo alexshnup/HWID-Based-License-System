@@ -68,9 +68,42 @@ docker logs client | tail -n 2
 
 - **API-Oriented Interactions**: Now manage and interact with license data programmatically via HTTP API calls.
   - **Add Key**: API endpoint to add a key to the license database.
+    ```bash
+        curl -X POST http://127.0.0.1:9347/add \
+        -H "Authorization: mytoken" \
+        -H "Content-Type: application/json" \
+        -d '{"email": "test2", "expiration": "2023-12-31"}'
+
+        {"email":"test2","exp_date":"2023-12-31","license":"5JDG-DVFC-5Z3H","message":"New license generated"}
+    ```
   - **List Keys**: Accessible API endpoint to list all keys.
+    ```bash
+        curl -s -X GET http://127.0.0.1:9347/list \
+        -H "Authorization: mytoken" | jq
+
+        [
+        "16FB-L6AX-2ZPZ:2023-12-31:test1:8e4db87551f6decab29760f2c2c0b8a74a0b746f08805f035cdb54c0923b4db5",
+        "5JDG-DVFC-5Z3H:2023-12-31:test2:NOTSET"
+        ]
+    ```
   - **Reset Key**: API feature to reset keys, altering the status within the database.
+    ```bash
+        curl -X POST http://127.0.0.1:9347/reset-key \
+        -H "Authorization: mytoken" \
+        -H "Content-Type: application/json" \
+        -d '{"key": "16FB-L6AX-2ZPZ"}'
+            
+        {"status":"success"}
+    ```
   - **Remove Key**: Remove keys from the database via API calls.
+    ```bash
+        curl -X DELETE http://127.0.0.1:9347/remove \
+        -H "Authorization: mytoken" \
+        -H "Content-Type: application/json" \
+        -d '{"email": "test1"}'
+
+        {"status":"success"}
+    ```
 - **Token-Based Authentication**: Introduce a secure layer for API interactions (**except for 'Check method'**).
 
 ## Workflow
