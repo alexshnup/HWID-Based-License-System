@@ -2,8 +2,11 @@ package main
 
 import (
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -16,7 +19,9 @@ import (
 )
 
 var (
-	PORT int = 9347
+	// PORT int = 9347
+	PORT int    = 9347
+	salt string = "salt"
 )
 
 func checkFileExist(filePath string) bool {
@@ -69,14 +74,23 @@ func randomString(n int) string {
 	return string(b)
 }
 
-//LICENSE:EXPDATE:EMAIL:HWID = 0,1,2
+func md5Hash(text string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+// LICENSE:EXPDATE:EMAIL:HWID = 0,1,2
 func checkHandler(response http.ResponseWriter, request *http.Request) {
 
 	request.ParseForm()
 	license := request.FormValue("license")
 	hwid := request.FormValue("hwid")
 
-	database, _ := readLines("db")
+	database, _ := readLines("/app/db/dbfile")
+
+	fmt.Printf("\nrequest.RequestURI=%v\n", request.RequestURI)
+
 	for _, table := range database {
 
 		row := strings.Split(table, ":")
@@ -90,9 +104,27 @@ func checkHandler(response http.ResponseWriter, request *http.Request) {
 
 		if license == row[0] && t.After(t2) {
 			if hwid == row[3] {
-				fmt.Fprintf(response, "0") //Registed, Good licnese
+				log.Printf("%v from %v Registed, Good licnese %s request.URL.Path %s", time.Now(), request.RemoteAddr, license, request.URL.Path)
+				// fmt.Fprintf(response, "0") //Registed, Good licnese
+
+				out := ""
+				m5 := md5Hash("0" + salt + hwid)
+
+				switch request.URL.Path {
+				case "/":
+					fmt.Printf("\nm5=%s\n", m5)
+					out = m5
+					// case "/gat":
+					// 	fmt.Printf("\nm5=%s\n", m5)
+					// 	out = m5 + DecryptString(gantner)
+					// 	fmt.Printf("\nout=%s\n", out)
+				}
+
+				// out := md5Hash(md5Hash("0") + md5Hash("solt2022"+stlsolt))
+				fmt.Fprintf(response, out) //Registed, Good licnese
+				return
 			} else if row[3] == "NOTSET" {
-				b, err := ioutil.ReadFile("db")
+				b, err := ioutil.ReadFile("/app/db/dbfile")
 				if err != nil {
 					fmt.Println("READfromCHECK")
 					os.Exit(0)
@@ -102,16 +134,32 @@ func checkHandler(response http.ResponseWriter, request *http.Request) {
 				edit := row[0] + ":" + row[1] + ":" + row[2] + ":" + hwid
 				res := strings.Replace(str, table, edit, -1)
 
-				err = ioutil.WriteFile("db", []byte(res), 0644)
+				err = ioutil.WriteFile("/app/db/dbfile", []byte(res), 0644)
 				if err != nil {
 					fmt.Println("WRITEfromCHECK")
 					os.Exit(0)
 				}
 
-				fmt.Fprintf(response, "2") //Registed, Good licnese
+				log.Printf("%v from %v NEW Registed, Good licnese %s", time.Now(), request.RemoteAddr, license)
+				// fmt.Fprintf(response, "2") //Registed, Good licnese
+				out := md5Hash("2" + salt + hwid)
+
+				fmt.Fprintf(response, out) //Registed, Good licnese
+				return
+
 			}
 		} else if license == row[0] && !t.After(t2) {
-			fmt.Fprintf(response, "1") //registerd but license experied
+
+			log.Printf("%v from %v registerd but license %s", time.Now(), request.RemoteAddr, license)
+			// fmt.Fprintf(response, "1") //registerd but license experied
+
+			out := md5Hash("1" + salt + hwid)
+			fmt.Fprintf(response, out) //Registed, Good licnese
+			return
+		}
+
+		if license == row[0] && hwid != row[3] {
+			fmt.Printf("from %v license %s problem hwid", request.RemoteAddr, license)
 		}
 	}
 }
@@ -124,16 +172,36 @@ func serverAPI() {
 	http.ListenAndServe(":"+string(strconv.Itoa(PORT)), nil)
 }
 
-func main() {
-	fmt.Println("License Server")
-	fmt.Println("Github: github.com/SaturnsVoid")
+func GetNewLicNumber() string {
+	return randomString(4) + "-" + randomString(4) + "-" + randomString(4)
+}
 
-	if !checkFileExist("db") {
+func LicExist(toFind string) bool {
+	database, _ := readLines("/app/db/dbfile")
+	for _, v := range database {
+		if strings.Contains(v, toFind) {
+			return true
+		}
+	}
+	return false
+}
+
+func main() {
+	salt = os.Getenv("SALT")
+	if salt == "" {
+		fmt.Println("SALT not set")
+		os.Exit(0)
+	}
+	fmt.Println("License Server")
+	fmt.Println("Github: https://github.com/alexshnup/easy-license-system")
+	fmt.Println("Forked from: https://github.com/SaturnsVoid/HWID-Based-License-System")
+
+	if !checkFileExist("/app/db/dbfile") {
 		fmt.Println("Database does not exist, creating new database.")
-		_ = createFile("db")
+		_ = createFile("/app/db/dbfile")
 	}
 
-	database, _ := readLines("db")
+	database, _ := readLines("/app/db/dbfile")
 
 	fmt.Println("Total Licenses:", len(database))
 
@@ -145,7 +213,7 @@ func main() {
 		scan.Scan()
 		switch scan.Text() {
 		case "list":
-			database, _ = readLines("db")
+			database, _ = readLines("/app/db/dbfile")
 			for _, table := range database {
 				fmt.Println(table)
 			}
@@ -170,11 +238,15 @@ func main() {
 			}
 			experation = scan.Text()
 
-			license = randomString(4) + "-" + randomString(4) + "-" + randomString(4)
-
-			b, err := ioutil.ReadFile("db")
+			b, err := ioutil.ReadFile("/app/db/dbfile")
 			if err != nil {
 				os.Exit(0)
+			}
+
+			license = randomString(4) + "-" + randomString(4) + "-" + randomString(4)
+			for LicExist(license) {
+				fmt.Println("Generating...")
+				license = randomString(4) + "-" + randomString(4) + "-" + randomString(4)
 			}
 
 			str := string(b)
@@ -183,7 +255,7 @@ func main() {
 			re := regexp.MustCompile("(?m)^\\s*$[\r\n]*")
 			str2 := strings.Trim(re.ReplaceAllString(str, ""), "\r\n")
 
-			err = ioutil.WriteFile("db", []byte(str2), 0644)
+			err = ioutil.WriteFile("/app/db/dbfile", []byte(str2), 0644)
 			if err != nil {
 				os.Exit(0)
 			}
@@ -210,9 +282,15 @@ func main() {
 			}
 
 		expb:
-			fmt.Print("License Experation (YYYY-MM-DD): ")
+			fmt.Print("License Experation ( YYYY-MM-DD ): ")
 			scan = bufio.NewScanner(os.Stdin)
 			scan.Scan()
+			if len(scan.Text()) == 0 {
+
+				experation = "2019-12-30"
+				fmt.Printf("Default %s", experation)
+				goto expbdefault
+			}
 			_, err = time.Parse("2006-01-02", scan.Text())
 			if err != nil {
 				fmt.Println("Experation must be in the YYYY-MM-DD Format.")
@@ -220,12 +298,13 @@ func main() {
 			}
 			experation = scan.Text()
 
+		expbdefault:
 			for i := 0; i < n; i++ {
 			restart:
 				var old string
 				license := randomString(4) + "-" + randomString(4) + "-" + randomString(4)
 				if license != old {
-					b, err := ioutil.ReadFile("db")
+					b, err := ioutil.ReadFile("/app/db/dbfile")
 					if err != nil {
 						os.Exit(0)
 					}
@@ -236,7 +315,7 @@ func main() {
 					re := regexp.MustCompile("(?m)^\\s*$[\r\n]*")
 					str2 := strings.Trim(re.ReplaceAllString(str, ""), "\r\n")
 
-					err = ioutil.WriteFile("db", []byte(str2), 0644)
+					err = ioutil.WriteFile("/app/db/dbfile", []byte(str2), 0644)
 					if err != nil {
 						os.Exit(0)
 					}
@@ -248,7 +327,7 @@ func main() {
 			}
 
 		case "remove":
-			fmt.Print("What email would you like to remove?: ")
+			fmt.Print("What licence would you like to remove?: ")
 			scan := bufio.NewScanner(os.Stdin)
 			scan.Scan()
 
@@ -256,9 +335,9 @@ func main() {
 
 				row := strings.Split(table, ":")
 
-				if scan.Text() == row[2] { //Found in DB
+				if scan.Text() == row[3] { //Found in DB
 
-					b, err := ioutil.ReadFile("db")
+					b, err := ioutil.ReadFile("/app/db/dbfile")
 					if err != nil {
 						os.Exit(0)
 					}
@@ -269,7 +348,7 @@ func main() {
 					re := regexp.MustCompile("(?m)^\\s*$[\r\n]*")
 					reres := strings.Trim(re.ReplaceAllString(res, ""), "\r\n")
 
-					err = ioutil.WriteFile("db", []byte(reres), 0644)
+					err = ioutil.WriteFile("/app/db/dbfile", []byte(reres), 0644)
 					if err != nil {
 						os.Exit(0)
 					}
@@ -279,8 +358,9 @@ func main() {
 			fmt.Println("Done")
 		case "exit":
 			os.Exit(0)
-		default:
-			fmt.Println("Unknown Command")
+			// default:
+			// 	fmt.Println("Unknown Command")
 		}
+		time.Sleep(1 * time.Second)
 	}
 }

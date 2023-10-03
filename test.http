@@ -1,0 +1,4 @@
+POST http://127.0.0.1:9347/ HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+hwid=5478a74300bb05e53d82f45b4807284c&license=86UU-N4SB-OQYH

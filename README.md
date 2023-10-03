@@ -1,3 +1,29 @@
+## Hardware based license server
+
+forked and modified from https://github.com/SaturnsVoid/HWID-Based-License-System
+
+## Usage
+
+### Buld and run server
+
+```bash
+docker build -t licserver . 
+docker run -d --rm -p 9347:9347 -v $(pwd)/db:/app/db --name licserver -e SALT="12345salt" licserver 
+```
+
+### Add first license
+```bash
+docker exec -it licserver /app/server -add
+```
+
+### Run client
+```bash
+License=86UU-N4SB-OQYH go run client/client.go 
+```
+
+
+_________________________________________________________________________________________
+
 # HWID-Based-License-System
 A GoLANG based HWID license system, basic.
 
