@@ -1,0 +1,26 @@
+FROM golang as builder
+
+ENV GO111MODULE=on
+
+WORKDIR /app
+
+COPY go.mod .
+COPY go.sum .
+
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o client/client ./client/*.go 
+# RUN  go build ./client/*.go 
+#RUN CGO_ENABLED=0 GOOS=darwin go build -o client/bin ./client/*.go 
+
+FROM alpine:latest
+# Copy client binary from builder stage
+COPY --from=builder /app/client/client /app/
+# Create db directory
+RUN mkdir -p /app/db
+# Expose port
+EXPOSE 9348
+# Set entry point
+ENTRYPOINT ["/app/client"]
