@@ -332,7 +332,7 @@ func removeKeyHandler(w http.ResponseWriter, r *http.Request) {
 	lines := strings.Split(str, "\n")
 	for _, line := range lines {
 		parts := strings.Split(line, ":")
-		if len(parts) > 3 && parts[3] == req.Email {
+		if len(parts) > 3 && parts[2] == req.Email {
 			removed = true
 			continue // skip this line
 		}

@@ -48,17 +48,20 @@ docker logs client | tail -n 2
 curl -X POST http://127.0.0.1:9347/add \
 -H "Authorization: mytoken" \
 -H "Content-Type: application/json" \
--d '{"email": "test1", "expiration": "2023-12-31"}'
+-d '{"email": "test2", "expiration": "2023-12-31"}'
 
-{"email":"test1","exp_date":"2023-12-31","license":"16FB-L6AX-2ZPZ","message":"New license generated"}
+{"email":"test2","exp_date":"2023-12-31","license":"5JDG-DVFC-5Z3H","message":"New license generated"}
 ```
 
 ### LIST
 ```bash
-curl -X GET http://127.0.0.1:9347/list \
--H "Authorization: mytoken"
+curl -s -X GET http://127.0.0.1:9347/list \
+-H "Authorization: mytoken" | jq
 
-["16FB-L6AX-2ZPZ:2023-12-31:test1:NOTSET"]
+[
+  "16FB-L6AX-2ZPZ:2023-12-31:test1:8e4db87551f6decab29760f2c2c0b8a74a0b746f08805f035cdb54c0923b4db5",
+  "5JDG-DVFC-5Z3H:2023-12-31:test2:NOTSET"
+]
 ```
 
 ### RESET
@@ -68,17 +71,17 @@ curl -X POST http://127.0.0.1:9347/reset-key \
 -H "Content-Type: application/json" \
 -d '{"key": "16FB-L6AX-2ZPZ"}'
     
-    {"email":"test1","exp_date":"2023-12-31","license":"16FB-L6AX-2ZPZ","message":"License is valid"}
+{"status":"success"}
 ```
 
 ### REMOVE
 ```bash
-curl -X POST http://127.0.0.1:9347/remove
+curl -X DELETE http://127.0.0.1:9347/remove \
 -H "Authorization: mytoken" \
 -H "Content-Type: application/json" \
 -d '{"email": "test1"}'
 
-{"email":"test1","message":"License removed"}
+{"status":"success"}
 ```
 
 
