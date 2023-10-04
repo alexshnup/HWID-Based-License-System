@@ -21,9 +21,10 @@ import (
 
 var (
 	// PORT int = 9347
-	PORT  int    = 9347
-	salt  string = "12345salt"
-	token string = "1234TOKEN"
+	PORT   int    = 9347
+	salt   string = "12345salt"
+	token  string = "1234TOKEN"
+	dbfile string = "/app/db/dbfile"
 )
 
 func fileExists(filePath string) bool {
@@ -86,7 +87,7 @@ func checkHandler(response http.ResponseWriter, request *http.Request) {
 	license := request.FormValue("license")
 	hwid := request.FormValue("hwid")
 
-	database, _ := readLines("/app/db/dbfile")
+	database, _ := readLines(dbfile)
 
 	fmt.Printf("\nrequest.RequestURI=%v\n", request.RequestURI)
 
@@ -112,7 +113,7 @@ func checkHandler(response http.ResponseWriter, request *http.Request) {
 				fmt.Fprint(response, out) //Registed, Good licnese
 				return
 			} else if row[3] == "NOTSET" {
-				b, err := os.ReadFile("/app/db/dbfile")
+				b, err := os.ReadFile(dbfile)
 				if err != nil {
 					fmt.Println("READfromCHECK")
 					os.Exit(0)
@@ -122,7 +123,7 @@ func checkHandler(response http.ResponseWriter, request *http.Request) {
 				edit := row[0] + ":" + row[1] + ":" + row[2] + ":" + hwid
 				res := strings.Replace(str, table, edit, -1)
 
-				err = os.WriteFile("/app/db/dbfile", []byte(res), 0644)
+				err = os.WriteFile(dbfile, []byte(res), 0644)
 				if err != nil {
 					fmt.Println("WRITEfromCHECK")
 					os.Exit(0)
@@ -185,12 +186,12 @@ func addKeyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read the dbfile
-	b, err := os.ReadFile("/app/db/dbfile")
-	if err != nil {
-		http.Error(w, "Failed to read data", http.StatusInternalServerError)
-		return
-	}
+	// // Read the dbfile
+	b, _ := os.ReadFile(dbfile)
+	// if err != nil {
+	// 	http.Error(w, "Failed to read data: "+err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 
 	// Generate the license
 	license := randomString(4) + "-" + randomString(4) + "-" + randomString(4)
@@ -206,7 +207,7 @@ func addKeyHandler(w http.ResponseWriter, r *http.Request) {
 	str2 := strings.Trim(re.ReplaceAllString(str, ""), "\r\n")
 
 	// Write back to the dbfile
-	err = os.WriteFile("/app/db/dbfile", []byte(str2), 0644)
+	err = os.WriteFile(dbfile, []byte(str2), 0644)
 	if err != nil {
 		http.Error(w, "Failed to write data", http.StatusInternalServerError)
 		return
@@ -226,7 +227,7 @@ func addKeyHandler(w http.ResponseWriter, r *http.Request) {
 
 func listKeysHandler(w http.ResponseWriter, r *http.Request) {
 	// Open the dbfile
-	file, err := os.Open("/app/db/dbfile")
+	file, err := os.Open(dbfile)
 	if err != nil {
 		http.Error(w, "Failed to read data", http.StatusInternalServerError)
 		return
@@ -263,7 +264,7 @@ func resetKeyHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Resetting key: %s\n", req.Key)
 
 	// Open the dbfile
-	file, err := os.Open("/app/db/dbfile")
+	file, err := os.Open(dbfile)
 	if err != nil {
 		http.Error(w, "Failed to read data", http.StatusInternalServerError)
 		return
@@ -296,7 +297,7 @@ func resetKeyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Write the modified data back to the file
-	err = os.WriteFile("/app/db/dbfile", []byte(strings.Join(lines, "\n")), 0644)
+	err = os.WriteFile(dbfile, []byte(strings.Join(lines, "\n")), 0644)
 	if err != nil {
 		http.Error(w, "Failed to write data", http.StatusInternalServerError)
 		return
@@ -317,7 +318,7 @@ func removeKeyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read the dbfile
-	b, err := ioutil.ReadFile("/app/db/dbfile")
+	b, err := ioutil.ReadFile(dbfile)
 	if err != nil {
 		http.Error(w, "Failed to read data", http.StatusInternalServerError)
 		return
@@ -349,7 +350,7 @@ func removeKeyHandler(w http.ResponseWriter, r *http.Request) {
 	newStr := strings.Trim(re.ReplaceAllString(strings.Join(newDB, "\n"), ""), "\r\n")
 
 	// Write the modified data back to the file
-	err = os.WriteFile("/app/db/dbfile", []byte(newStr), 0644)
+	err = os.WriteFile(dbfile, []byte(newStr), 0644)
 	if err != nil {
 		http.Error(w, "Failed to write data", http.StatusInternalServerError)
 		return
@@ -402,7 +403,7 @@ func GetNewLicNumber() string {
 }
 
 func LicExist(toFind string) bool {
-	database, _ := readLines("/app/db/dbfile")
+	database, _ := readLines(dbfile)
 	for _, v := range database {
 		if strings.Contains(v, toFind) {
 			return true
@@ -430,14 +431,14 @@ func main() {
 	fmt.Println("Github: https://github.com/alexshnup/easy-license-system")
 	fmt.Println("Forked from: https://github.com/SaturnsVoid/HWID-Based-License-System")
 
-	if !fileExists("/app/db/dbfile") {
+	if !fileExists(dbfile) {
 		log.Println("Database does not exist, creating new database.")
-		if err := createFile("/app/db/dbfile"); err != nil {
+		if err := createFile(dbfile); err != nil {
 			log.Fatalf("Failed to create file: %v", err)
 		}
 	}
 
-	database, err := readLines("/app/db/dbfile")
+	database, err := readLines(dbfile)
 	if err != nil {
 		log.Fatalf("Error reading database: %v", err)
 	}
